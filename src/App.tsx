@@ -10,7 +10,6 @@ import Lista from "./componentes/Lista";
 import { crearAlmacen } from "./lib/almacen";
 import { CATALOGO } from "./lib/catalogo";
 import { codigoCasa, leerNombre } from "./lib/casa";
-import { haySupabase } from "./lib/supabase";
 import type { Item, Producto } from "./lib/tipos";
 
 type Vista = "lista" | "catalogo";
@@ -137,7 +136,7 @@ export default function App() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {haySupabase && items.length > 0 && (
+          {items.length > 0 && (
             <button
               onClick={() => setFactura(true)}
               aria-label="Leer factura"
@@ -162,6 +161,7 @@ export default function App() {
             items={items}
             onComprar={comprar}
             onEditarNota={(item) => setEdicion({ tipo: "item", item })}
+            onLeerFactura={() => setFactura(true)}
             onIrAlCatalogo={() => setVista("catalogo")}
           />
         ) : (

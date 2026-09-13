@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Check, Loader2, Receipt, RotateCcw } from "lucide-react";
 import Hoja from "./Hoja";
 import { comprimir, leerFactura, type Coincidencia } from "../lib/factura";
+import { haySupabase } from "../lib/supabase";
 import type { Item } from "../lib/tipos";
 
 interface Props {
@@ -68,7 +69,20 @@ export default function HojaFactura({ abierta, items, onConfirmar, onCerrar }: P
         }}
       />
 
-      {paso.fase === "elegir" && (
+      {paso.fase === "elegir" && !haySupabase && (
+        <div className="text-center">
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-naranja-claro">
+            <Receipt size={28} className="text-naranja" />
+          </div>
+          <p className="mx-auto max-w-xs text-sm text-tinta/60">
+            El lector de facturas todavía no está conectado. Falta configurar Supabase y
+            desplegar la función <span className="font-mono text-xs">leer-factura</span>;
+            está explicado en el README del repo.
+          </p>
+        </div>
+      )}
+
+      {paso.fase === "elegir" && haySupabase && (
         <div className="text-center">
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-verde-claro">
             <Receipt size={28} className="text-verde" />

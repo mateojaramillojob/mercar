@@ -1,4 +1,4 @@
-import { Pencil, ShoppingBasket } from "lucide-react";
+import { Pencil, Receipt, ShoppingBasket } from "lucide-react";
 import { CATEGORIAS } from "../lib/catalogo";
 import type { Item } from "../lib/tipos";
 
@@ -7,9 +7,16 @@ interface Props {
   onComprar: (item: Item) => void;
   onEditarNota: (item: Item) => void;
   onIrAlCatalogo: () => void;
+  onLeerFactura: () => void;
 }
 
-export default function Lista({ items, onComprar, onEditarNota, onIrAlCatalogo }: Props) {
+export default function Lista({
+  items,
+  onComprar,
+  onEditarNota,
+  onIrAlCatalogo,
+  onLeerFactura,
+}: Props) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-8 py-20 text-center">
@@ -93,6 +100,14 @@ export default function Lista({ items, onComprar, onEditarNota, onIrAlCatalogo }
           </ul>
         </section>
       ))}
+
+      <button
+        onClick={onLeerFactura}
+        className="toque flex w-full items-center justify-center gap-2 rounded-xl2 border border-dashed border-borde py-3.5 text-sm font-bold text-tinta/55"
+      >
+        <Receipt size={17} />
+        Ya compré — leer la factura
+      </button>
     </div>
   );
 }
