@@ -9,7 +9,7 @@ import HojaProductoNuevo from "./componentes/HojaProductoNuevo";
 import Lista from "./componentes/Lista";
 import { crearAlmacen } from "./lib/almacen";
 import { CATALOGO } from "./lib/catalogo";
-import { codigoCasa, leerNombre } from "./lib/casa";
+import { cambiarCasa, casaEnElEnlace, codigoCasa, leerNombre, limpiarEnlace } from "./lib/casa";
 import type { Item, Producto } from "./lib/tipos";
 
 type Vista = "lista" | "catalogo";
@@ -44,6 +44,20 @@ export default function App() {
       }),
     [almacen],
   );
+
+  // Tocar el tag NFC con la app ya abierta en esa pestaña solo cambia el hash:
+  // el navegador no recarga, así que el código hay que atenderlo a mano o el
+  // segundo teléfono se queda en su propia lista sin darse cuenta.
+  useEffect(() => {
+    const alCambiarHash = () => {
+      const enElEnlace = casaEnElEnlace();
+      if (!enElEnlace) return;
+      if (enElEnlace === casa) limpiarEnlace();
+      else cambiarCasa(enElEnlace);
+    };
+    window.addEventListener("hashchange", alCambiarHash);
+    return () => window.removeEventListener("hashchange", alCambiarHash);
+  }, [casa]);
 
   const avisar = useCallback((texto: string, deshacer?: () => void) => {
     setMensaje({ id: ++siguienteAviso.current, texto, deshacer });

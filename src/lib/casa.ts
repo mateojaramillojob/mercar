@@ -6,17 +6,27 @@ function generar(): string {
   return Array.from(bytes, (b) => ALFABETO[b % ALFABETO.length]).join("");
 }
 
+/** El código que trae el enlace del tag NFC (`#casa=ABC123`), si trae alguno. */
+export function casaEnElEnlace(): string | null {
+  const crudo = new URLSearchParams(location.hash.slice(1)).get("casa");
+  return crudo ? crudo.toUpperCase().slice(0, 12) : null;
+}
+
+/** Deja la barra de direcciones limpia una vez leído el código. */
+export function limpiarEnlace(): void {
+  history.replaceState(null, "", location.pathname + location.search);
+}
+
 /**
  * El código que une los dos teléfonos a la misma lista. Llega en el enlace del
- * tag NFC (`#casa=ABC123`), o se genera la primera vez que se abre la app.
+ * tag NFC, o se genera la primera vez que se abre la app.
  */
 export function codigoCasa(): string {
-  const enElEnlace = new URLSearchParams(location.hash.slice(1)).get("casa");
+  const enElEnlace = casaEnElEnlace();
   if (enElEnlace) {
-    const limpio = enElEnlace.toUpperCase().slice(0, 12);
-    localStorage.setItem(CLAVE, limpio);
-    history.replaceState(null, "", location.pathname + location.search);
-    return limpio;
+    localStorage.setItem(CLAVE, enElEnlace);
+    limpiarEnlace();
+    return enElEnlace;
   }
 
   const guardado = localStorage.getItem(CLAVE);

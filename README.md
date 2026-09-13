@@ -68,11 +68,29 @@ Push a `main` → GitHub Actions hace el build y publica en GitHub Pages
 
 ## El tag NFC
 
-1. Comprar tags NTAG213 (unos 8 € por 10).
-2. Instalar **NFC Tools** en el celular.
-3. Write → Add a record → URL → pegar el enlace con el código de la casa
-   (sale en Ajustes → Compartir) → Write.
-4. Pegar el tag en la cocina.
+El tag no sincroniza nada: solo guarda una URL. Quien sincroniza es Supabase.
+Lo que hace el tag es abrir la lista de un toque, ya apuntando a la casa correcta.
+
+**Primero hay que fijar el código de casa.** Cada teléfono que abre la app por
+primera vez se inventa el suyo, así que hay que elegir uno y que los dos usen ese:
+abrir la app, **Ajustes → Compartir**, y ese enlace
+(`https://mateojaramillojob.github.io/mercar/#casa=ABC123`) es el que va al tag.
+
+1. Comprar tags **NTAG213** (unos 8 € por 10 en Amazon.de). Si va sobre metal —la
+   nevera— tienen que ser **"on-metal"**, con blindaje de ferrita: el metal desafina
+   la antena y un tag normal no se lee. Sobre azulejo, madera o vidrio sirve el normal.
+2. Instalar **NFC Tools** (gratis, iOS y Android).
+3. Write → Add a record → **URL/URI** → pegar el enlace → Write, y acercar el tag.
+4. No usar *Lock tag* todavía: lo deja de solo lectura para siempre y el enlace
+   puede cambiar.
+5. Pegarlo en la cocina y tocarlo con cada teléfono una vez.
+
+En iPhone XS o más nuevo el tag se lee sin abrir nada. En iPhone 7/8/X toca usar el
+lector NFC del Centro de Control. En Android hay que tener NFC activado.
+
+**Si se instala en la pantalla de inicio:** en iOS la app instalada guarda sus datos
+aparte de Safari, y el tag siempre abre Safari. Después de instalarla hay que
+abrirla y meter el código con **Ajustes → Entrar a otra casa**.
 
 ## Etapa 2
 
