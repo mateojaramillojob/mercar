@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListChecks, Plus, Receipt, Settings } from "lucide-react";
+import { AlertTriangle, ListChecks, Plus, Receipt, Settings } from "lucide-react";
 import Ajustes from "./componentes/Ajustes";
 import Aviso, { type Mensaje } from "./componentes/Aviso";
 import Catalogo from "./componentes/Catalogo";
@@ -33,14 +33,16 @@ export default function App() {
   const [ajustes, setAjustes] = useState(false);
   const [factura, setFactura] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
 
   const siguienteAviso = useRef(0);
 
   useEffect(
     () =>
-      almacen.suscribir(({ items, propios }) => {
+      almacen.suscribir(({ items, propios, fallo }) => {
         setItems(items);
         setPropios(propios);
+        setFallo(fallo);
       }),
     [almacen],
   );
@@ -63,6 +65,18 @@ export default function App() {
     setMensaje({ id: ++siguienteAviso.current, texto, deshacer });
   }, []);
 
+  /** Una escritura que se pierde en silencio es lo peor en una lista compartida. */
+  const intentar = useCallback(
+    async (accion: () => Promise<void>) => {
+      try {
+        await accion();
+      } catch (e) {
+        setFallo(e instanceof Error ? e.message : "No se pudo guardar el cambio.");
+      }
+    },
+    [],
+  );
+
   const productos = useMemo(() => {
     const vistos = new Set<string>();
     return [...propios, ...CATALOGO].filter((p) => {
@@ -77,68 +91,68 @@ export default function App() {
 
   const agregar = useCallback(
     async (producto: Producto, nota: string | null = null) => {
-      await almacen.agregar(producto, nota, nombre.trim() || null);
+      await intentar(() => almacen.agregar(producto, nota, nombre.trim() || null));
       navigator.vibrate?.(8);
       avisar(`${producto.emoji} ${producto.nombre} a la lista`);
     },
-    [almacen, nombre, avisar],
+    [almacen, nombre, avisar, intentar],
   );
 
   const comprar = useCallback(
     async (item: Item) => {
-      await almacen.quitar(item.id);
+      await intentar(() => almacen.quitar(item.id));
       navigator.vibrate?.(8);
       avisar(`${item.emoji} ${item.nombre} listo`, () =>
         almacen.agregar(item, item.nota, item.agregadoPor),
       );
     },
-    [almacen, avisar],
+    [almacen, avisar, intentar],
   );
 
   const guardarNota = useCallback(
     async (nota: string) => {
       if (!edicion) return;
       if (edicion.tipo === "item") {
-        await almacen.editarNota(edicion.item.id, nota || null);
+        await intentar(() => almacen.editarNota(edicion.item.id, nota || null));
       } else {
         await agregar(edicion.producto, nota || null);
       }
       setEdicion(null);
     },
-    [edicion, almacen, agregar],
+    [edicion, almacen, agregar, intentar],
   );
 
   const crearProducto = useCallback(
     async (producto: Producto) => {
-      await almacen.agregarPropio(producto);
+      await intentar(() => almacen.agregarPropio(producto));
       await agregar(producto);
       setProductoNuevo(null);
       setVista("lista");
     },
-    [almacen, agregar],
+    [almacen, agregar, intentar],
   );
 
   const tacharDeFactura = useCallback(
     async (ids: string[]) => {
       const tachados = items.filter((i) => ids.includes(i.id));
-      await almacen.quitarVarios(ids);
+      await intentar(() => almacen.quitarVarios(ids));
       setFactura(false);
       avisar(
         `${tachados.length} ${tachados.length === 1 ? "cosa comprada" : "cosas compradas"}`,
         () => tachados.forEach((i) => void almacen.agregar(i, i.nota, i.agregadoPor)),
       );
     },
-    [items, almacen, avisar],
+    [items, almacen, avisar, intentar],
   );
 
   const vaciar = useCallback(async () => {
     const anteriores = items;
-    await almacen.vaciar();
+    await intentar(() => almacen.vaciar());
     setAjustes(false);
     avisar("Lista vaciada", () => {
       anteriores.forEach((i) => void almacen.agregar(i, i.nota, i.agregadoPor));
     });
-  }, [items, almacen, avisar]);
+  }, [items, almacen, avisar, intentar]);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
@@ -168,6 +182,24 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {fallo && (
+        <div className="mx-4 mb-3 flex items-start gap-2.5 rounded-xl2 bg-naranja-claro px-4 py-3">
+          <AlertTriangle size={17} className="mt-px shrink-0 text-naranja" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-naranja">{fallo}</p>
+            <p className="mt-0.5 text-xs text-naranja/75">
+              Mientras tanto no se está guardando nada.
+            </p>
+          </div>
+          <button
+            onClick={() => setFallo(null)}
+            className="shrink-0 text-xs font-bold text-naranja/60"
+          >
+            Ocultar
+          </button>
+        </div>
+      )}
 
       <main className="flex-1 pb-28">
         {vista === "lista" ? (

@@ -4,7 +4,9 @@ import type { Item, Producto } from "./tipos";
 export interface Almacen {
   /** true cuando los dos teléfonos ven la misma lista. */
   readonly compartido: boolean;
-  suscribir(cb: (estado: { items: Item[]; propios: Producto[] }) => void): () => void;
+  suscribir(
+    cb: (estado: { items: Item[]; propios: Producto[]; fallo: string | null }) => void,
+  ): () => void;
   agregar(producto: Producto, nota: string | null, quien: string | null): Promise<void>;
   editarNota(id: string, nota: string | null): Promise<void>;
   quitar(id: string): Promise<void>;
@@ -46,7 +48,11 @@ function almacenLocal(): Almacen {
     compartido: false,
     suscribir(cb) {
       const emitir = () =>
-        cb({ items: leer<Item>(CLAVE_ITEMS), propios: leer<Producto>(CLAVE_PROPIOS) });
+        cb({
+          items: leer<Item>(CLAVE_ITEMS),
+          propios: leer<Producto>(CLAVE_PROPIOS),
+          fallo: null,
+        });
       oyentes.add(emitir);
       emitir();
       return () => oyentes.delete(emitir);
@@ -113,8 +119,30 @@ const aItem = (f: FilaItem): Item => ({
   creadoEn: f.creado_en,
 });
 
+/** Los códigos de PostgREST no le dicen nada a nadie; esto sí. */
+function explicar(error: { code?: string; message: string }): string {
+  // 42P01 lo tira Postgres; PGRST205 lo tira PostgREST cuando la tabla no está
+  // en su caché de esquema, que es lo que se ve de verdad desde el navegador.
+  if (
+    error.code === "42P01" ||
+    error.code === "PGRST205" ||
+    /could not find the table/i.test(error.message)
+  ) {
+    return "Faltan las tablas en Supabase: hay que correr la migración 0001_mercar.sql.";
+  }
+  if (error.code === "42501" || error.code === "PGRST301") {
+    return "Supabase rechazó la operación por permisos. Revisa las políticas RLS.";
+  }
+  return error.message;
+}
+
 function almacenSupabase(casa: string): Almacen {
   const sb = supabase!;
+
+  /** Una escritura que falla en silencio es peor que un error: se pierde la cosa. */
+  const oExplotar = (error: { code?: string; message: string } | null) => {
+    if (error) throw new Error(explicar(error));
+  };
 
   return {
     compartido: true,
@@ -127,7 +155,13 @@ function almacenSupabase(casa: string): Almacen {
           sb.from("mercar_propios").select("*").eq("casa", casa).order("creado_en"),
         ]);
         if (!vivo) return;
+        const error = items.error ?? propios.error;
+        if (error) {
+          cb({ items: [], propios: [], fallo: explicar(error) });
+          return;
+        }
         cb({
+          fallo: null,
           items: (items.data ?? []).map((f) => aItem(f as FilaItem)),
           propios: (propios.data ?? []).map((f) => {
             const p = f as FilaItem;
@@ -172,7 +206,7 @@ function almacenSupabase(casa: string): Almacen {
       };
     },
     async agregar(producto, nota, quien) {
-      await sb.from("mercar_items").insert({
+      const { error } = await sb.from("mercar_items").insert({
         casa,
         nombre: producto.nombre,
         nombre_de: producto.nombreDe,
@@ -181,28 +215,34 @@ function almacenSupabase(casa: string): Almacen {
         nota,
         agregado_por: quien,
       });
+      oExplotar(error);
     },
     async editarNota(id, nota) {
-      await sb.from("mercar_items").update({ nota }).eq("id", id);
+      const { error } = await sb.from("mercar_items").update({ nota }).eq("id", id);
+      oExplotar(error);
     },
     async quitar(id) {
-      await sb.from("mercar_items").delete().eq("id", id);
+      const { error } = await sb.from("mercar_items").delete().eq("id", id);
+      oExplotar(error);
     },
     async quitarVarios(ids) {
       if (ids.length === 0) return;
-      await sb.from("mercar_items").delete().in("id", ids);
+      const { error } = await sb.from("mercar_items").delete().in("id", ids);
+      oExplotar(error);
     },
     async vaciar() {
-      await sb.from("mercar_items").delete().eq("casa", casa);
+      const { error } = await sb.from("mercar_items").delete().eq("casa", casa);
+      oExplotar(error);
     },
     async agregarPropio(producto) {
-      await sb.from("mercar_propios").insert({
+      const { error } = await sb.from("mercar_propios").insert({
         casa,
         nombre: producto.nombre,
         nombre_de: producto.nombreDe,
         emoji: producto.emoji,
         categoria: producto.categoria,
       });
+      oExplotar(error);
     },
   };
 }
