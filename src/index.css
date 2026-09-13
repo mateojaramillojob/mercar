@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-crema text-tinta antialiased;
+    /* La app vive en el celular: nada de rebote ni de zoom por doble toque. */
+    overscroll-behavior-y: none;
+    touch-action: manipulation;
+  }
+  /* El teclado de iOS hace zoom si la fuente baja de 16px. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  .tarjeta {
+    @apply rounded-xl2 border border-borde bg-papel;
+  }
+  .toque {
+    @apply transition-transform active:scale-[0.97];
+  }
+  .a-salvo-abajo {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+  .a-salvo-arriba {
+    padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+  }
+}

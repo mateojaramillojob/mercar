@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1F7A54"/>
+  <!-- El asa va como relleno, no como trazo: hay renderizadores que se comen el stroke. -->
+  <path d="M166 212 A 90 90 0 0 1 346 212 L 316 212 A 60 60 0 0 0 196 212 Z" fill="#FBF7F0"/>
+  <path d="M104 206 H408 L372 408 C368 432 347 448 323 448 H189 C165 448 144 432 140 408 Z" fill="#FBF7F0"/>
+  <g fill="#1F7A54">
+    <rect x="196" y="262" width="26" height="126" rx="13"/>
+    <rect x="243" y="262" width="26" height="126" rx="13"/>
+    <rect x="290" y="262" width="26" height="126" rx="13"/>
+  </g>
+</svg>
