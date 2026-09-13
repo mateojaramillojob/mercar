@@ -14,6 +14,9 @@ y se encuentran en el pasillo en alemán.
 - **Agregar** — catálogo de ~200 productos de REWE / Edeka / Aldi / Lidl / dm.
   Un toque lo manda a la lista; mantener presionado abre la cantidad ("2 kg").
   La búsqueda entiende español, alemán y funciona sin tildes.
+- **Factura** — foto a la factura del súper y saca de la lista lo que ya se
+  compró. Un modelo con visión lee el papel térmico y casa "H-MILCH 3,5%" con
+  "Leche"; lo dudoso queda sin marcar para que uno confirme. Requiere Supabase.
 - **Casa** — un código de 6 caracteres une los dos teléfonos a la misma lista.
   Viaja en el enlace del tag NFC (`#casa=ABC123`).
 
@@ -34,6 +37,19 @@ que se prueba antes de conectar la base.
    (Project Settings → API).
 3. En GitHub: **Settings → Secrets and variables → Actions**, crear
    `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` con esos mismos valores.
+
+## Desplegar el lector de facturas
+
+La función vive en [`supabase/functions/leer-factura`](supabase/functions/leer-factura/index.ts)
+y usa el mismo gateway de IA que `iron-stack-gainz`.
+
+1. Supabase → **Edge Functions** → *Deploy a new function* → nombre `leer-factura`
+   → pegar el contenido de `index.ts`.
+2. Desmarcar **Verify JWT** (la app no tiene login).
+3. Confirmar que el secret `LOVABLE_API_KEY` existe en ese proyecto
+   (**Project Settings → Edge Functions → Secrets**). Es el mismo que usa el gym.
+
+El botón de la cámara solo aparece cuando hay Supabase configurado.
 
 ### Sobre la privacidad
 

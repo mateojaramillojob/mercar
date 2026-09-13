@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListChecks, Plus, Settings } from "lucide-react";
+import { ListChecks, Plus, Receipt, Settings } from "lucide-react";
 import Ajustes from "./componentes/Ajustes";
 import Aviso, { type Mensaje } from "./componentes/Aviso";
 import Catalogo from "./componentes/Catalogo";
 import HojaNota from "./componentes/HojaNota";
+import HojaFactura from "./componentes/HojaFactura";
 import HojaProductoNuevo from "./componentes/HojaProductoNuevo";
 import Lista from "./componentes/Lista";
 import { crearAlmacen } from "./lib/almacen";
 import { CATALOGO } from "./lib/catalogo";
 import { codigoCasa, leerNombre } from "./lib/casa";
+import { haySupabase } from "./lib/supabase";
 import type { Item, Producto } from "./lib/tipos";
 
 type Vista = "lista" | "catalogo";
@@ -30,6 +32,7 @@ export default function App() {
   const [edicion, setEdicion] = useState<Edicion>(null);
   const [productoNuevo, setProductoNuevo] = useState<string | null>(null);
   const [ajustes, setAjustes] = useState(false);
+  const [factura, setFactura] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
 
   const siguienteAviso = useRef(0);
@@ -102,6 +105,19 @@ export default function App() {
     [almacen, agregar],
   );
 
+  const tacharDeFactura = useCallback(
+    async (ids: string[]) => {
+      const tachados = items.filter((i) => ids.includes(i.id));
+      await almacen.quitarVarios(ids);
+      setFactura(false);
+      avisar(
+        `${tachados.length} ${tachados.length === 1 ? "cosa comprada" : "cosas compradas"}`,
+        () => tachados.forEach((i) => void almacen.agregar(i, i.nota, i.agregadoPor)),
+      );
+    },
+    [items, almacen, avisar],
+  );
+
   const vaciar = useCallback(async () => {
     const anteriores = items;
     await almacen.vaciar();
@@ -120,13 +136,24 @@ export default function App() {
             {items.length > 0 ? `${items.length} ${items.length === 1 ? "cosa" : "cosas"}` : "al día"}
           </span>
         </div>
-        <button
-          onClick={() => setAjustes(true)}
-          aria-label="Ajustes"
-          className="toque grid h-10 w-10 place-items-center rounded-full bg-papel text-tinta/55 shadow-sm ring-1 ring-borde"
-        >
-          <Settings size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          {haySupabase && items.length > 0 && (
+            <button
+              onClick={() => setFactura(true)}
+              aria-label="Leer factura"
+              className="toque grid h-10 w-10 place-items-center rounded-full bg-papel text-tinta/55 shadow-sm ring-1 ring-borde"
+            >
+              <Receipt size={18} />
+            </button>
+          )}
+          <button
+            onClick={() => setAjustes(true)}
+            aria-label="Ajustes"
+            className="toque grid h-10 w-10 place-items-center rounded-full bg-papel text-tinta/55 shadow-sm ring-1 ring-borde"
+          >
+            <Settings size={18} />
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 pb-28">
@@ -184,6 +211,13 @@ export default function App() {
         nombreInicial={productoNuevo ?? ""}
         onCrear={(p) => void crearProducto(p)}
         onCerrar={() => setProductoNuevo(null)}
+      />
+
+      <HojaFactura
+        abierta={factura}
+        items={items}
+        onConfirmar={(ids) => void tacharDeFactura(ids)}
+        onCerrar={() => setFactura(false)}
       />
 
       <Ajustes

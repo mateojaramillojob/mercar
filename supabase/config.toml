@@ -1,0 +1,5 @@
+project_id = "sdyhgdqlclqiycmrxveb"
+
+# La app no tiene login: la Edge Function la llama la llave anónima.
+[functions.leer-factura]
+verify_jwt = false

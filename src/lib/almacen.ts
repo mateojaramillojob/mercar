@@ -8,6 +8,8 @@ export interface Almacen {
   agregar(producto: Producto, nota: string | null, quien: string | null): Promise<void>;
   editarNota(id: string, nota: string | null): Promise<void>;
   quitar(id: string): Promise<void>;
+  /** Lo que sale de una factura: un solo borrado en vez de uno por producto. */
+  quitarVarios(ids: string[]): Promise<void>;
   vaciar(): Promise<void>;
   agregarPropio(producto: Producto): Promise<void>;
 }
@@ -69,6 +71,13 @@ function almacenLocal(): Almacen {
       escribir(
         CLAVE_ITEMS,
         leer<Item>(CLAVE_ITEMS).filter((i) => i.id !== id),
+      );
+    },
+    async quitarVarios(ids) {
+      const fuera = new Set(ids);
+      escribir(
+        CLAVE_ITEMS,
+        leer<Item>(CLAVE_ITEMS).filter((i) => !fuera.has(i.id)),
       );
     },
     async vaciar() {
@@ -178,6 +187,10 @@ function almacenSupabase(casa: string): Almacen {
     },
     async quitar(id) {
       await sb.from("mercar_items").delete().eq("id", id);
+    },
+    async quitarVarios(ids) {
+      if (ids.length === 0) return;
+      await sb.from("mercar_items").delete().in("id", ids);
     },
     async vaciar() {
       await sb.from("mercar_items").delete().eq("casa", casa);
