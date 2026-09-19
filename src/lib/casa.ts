@@ -18,23 +18,34 @@ export function limpiarEnlace(): void {
 }
 
 /**
- * El código que une los dos teléfonos a la misma lista. Llega en el enlace del
- * tag NFC, o se genera la primera vez que se abre la app.
+ * El código que une los dos teléfonos a la misma lista: el del enlace del tag
+ * NFC, o el que ya estuviera guardado. `null` la primera vez.
+ *
+ * Antes se inventaba uno solo, y eso rompía la instalación en iPhone: el
+ * manifest arranca en /mercar/ sin el #casa=, así que la app instalada nacía
+ * con un código distinto al de Safari y quedaban dos listas separadas sin que
+ * nadie viera un error. Ahora la primera vez se pregunta.
  */
-export function codigoCasa(): string {
+export function codigoCasa(): string | null {
   const enElEnlace = casaEnElEnlace();
   if (enElEnlace) {
     localStorage.setItem(CLAVE, enElEnlace);
     limpiarEnlace();
     return enElEnlace;
   }
+  return localStorage.getItem(CLAVE);
+}
 
-  const guardado = localStorage.getItem(CLAVE);
-  if (guardado) return guardado;
-
+export function crearCasa(): string {
   const nuevo = generar();
   localStorage.setItem(CLAVE, nuevo);
   return nuevo;
+}
+
+export function entrarACasa(codigo: string): string {
+  const limpio = codigo.trim().toUpperCase();
+  localStorage.setItem(CLAVE, limpio);
+  return limpio;
 }
 
 export function cambiarCasa(codigo: string): void {

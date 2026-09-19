@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: "Mercar",
         short_name: "Mercar",
+        lang: "es",
         description: "La lista del mercado, compartida.",
         start_url: "/mercar/",
         scope: "/mercar/",

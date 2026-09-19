@@ -6,10 +6,11 @@ import Catalogo from "./componentes/Catalogo";
 import HojaNota from "./componentes/HojaNota";
 import HojaFactura from "./componentes/HojaFactura";
 import HojaProductoNuevo from "./componentes/HojaProductoNuevo";
+import Bienvenida from "./componentes/Bienvenida";
 import Lista from "./componentes/Lista";
 import { crearAlmacen } from "./lib/almacen";
 import { CATALOGO } from "./lib/catalogo";
-import { cambiarCasa, casaEnElEnlace, codigoCasa, leerNombre, limpiarEnlace } from "./lib/casa";
+import { casaEnElEnlace, codigoCasa, entrarACasa, leerNombre, limpiarEnlace } from "./lib/casa";
 import type { Item, Producto } from "./lib/tipos";
 
 type Vista = "lista" | "catalogo";
@@ -21,7 +22,31 @@ type Edicion =
   | null;
 
 export default function App() {
-  const casa = useMemo(codigoCasa, []);
+  const [casa, setCasa] = useState<string | null>(codigoCasa);
+
+  // Tocar el tag NFC con la app ya abierta solo cambia el hash: el navegador no
+  // recarga. Va aquí arriba y no dentro de Mercar porque el caso que importa es
+  // justo el otro: alguien en la pantalla de bienvenida que toca el tag.
+  useEffect(() => {
+    const alCambiarHash = () => {
+      const enElEnlace = casaEnElEnlace();
+      if (!enElEnlace) return;
+      limpiarEnlace();
+      setCasa(entrarACasa(enElEnlace));
+    };
+    window.addEventListener("hashchange", alCambiarHash);
+    return () => window.removeEventListener("hashchange", alCambiarHash);
+  }, []);
+
+  // Remontar con la casa como key deja limpio todo lo que colgaba de la anterior.
+  return casa ? (
+    <Mercar key={casa} casa={casa} />
+  ) : (
+    <Bienvenida onListo={setCasa} />
+  );
+}
+
+function Mercar({ casa }: { casa: string }) {
   const almacen = useMemo(() => crearAlmacen(casa), [casa]);
 
   const [items, setItems] = useState<Item[]>([]);
@@ -46,20 +71,6 @@ export default function App() {
       }),
     [almacen],
   );
-
-  // Tocar el tag NFC con la app ya abierta en esa pestaña solo cambia el hash:
-  // el navegador no recarga, así que el código hay que atenderlo a mano o el
-  // segundo teléfono se queda en su propia lista sin darse cuenta.
-  useEffect(() => {
-    const alCambiarHash = () => {
-      const enElEnlace = casaEnElEnlace();
-      if (!enElEnlace) return;
-      if (enElEnlace === casa) limpiarEnlace();
-      else cambiarCasa(enElEnlace);
-    };
-    window.addEventListener("hashchange", alCambiarHash);
-    return () => window.removeEventListener("hashchange", alCambiarHash);
-  }, [casa]);
 
   const avisar = useCallback((texto: string, deshacer?: () => void) => {
     setMensaje({ id: ++siguienteAviso.current, texto, deshacer });
