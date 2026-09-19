@@ -48,3 +48,10 @@ create policy mercar_propios_abierta on public.mercar_propios
 -- Sin esto no hay sincronización en vivo entre los dos teléfonos.
 alter publication supabase_realtime add table public.mercar_items;
 alter publication supabase_realtime add table public.mercar_propios;
+
+-- Y sin esto solo viajan los INSERT. Al borrar, Postgres mete en el WAL nada
+-- más la clave primaria, así que Realtime no puede evaluar la política RLS
+-- contra la fila y descarta el evento en silencio: el otro teléfono nunca ve
+-- desaparecer lo que uno ya compró, que es justo el gesto principal de la app.
+alter table public.mercar_items   replica identity full;
+alter table public.mercar_propios replica identity full;

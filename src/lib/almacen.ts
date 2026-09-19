@@ -139,6 +139,11 @@ function explicar(error: { code?: string; message: string }): string {
 function almacenSupabase(casa: string): Almacen {
   const sb = supabase!;
 
+  // Esperar el eco de Realtime para ver el propio cambio deja la interfaz
+  // colgada el tiempo del viaje de ida y vuelta, y la deja mal si el socket
+  // se cayó. Tras cada escritura se recarga sin esperar a nadie.
+  let recargar: () => void = () => {};
+
   /** Una escritura que falla en silencio es peor que un error: se pierde la cosa. */
   const oExplotar = (error: { code?: string; message: string } | null) => {
     if (error) throw new Error(explicar(error));
@@ -175,6 +180,7 @@ function almacenSupabase(casa: string): Almacen {
         });
       };
 
+      recargar = () => void cargar();
       void cargar();
 
       // Cualquier cambio en la casa recarga: la lista es de decenas de filas,
@@ -201,6 +207,7 @@ function almacenSupabase(casa: string): Almacen {
 
       return () => {
         vivo = false;
+        recargar = () => {};
         document.removeEventListener("visibilitychange", alVolver);
         void sb.removeChannel(canal);
       };
@@ -216,23 +223,28 @@ function almacenSupabase(casa: string): Almacen {
         agregado_por: quien,
       });
       oExplotar(error);
+      recargar();
     },
     async editarNota(id, nota) {
       const { error } = await sb.from("mercar_items").update({ nota }).eq("id", id);
       oExplotar(error);
+      recargar();
     },
     async quitar(id) {
       const { error } = await sb.from("mercar_items").delete().eq("id", id);
       oExplotar(error);
+      recargar();
     },
     async quitarVarios(ids) {
       if (ids.length === 0) return;
       const { error } = await sb.from("mercar_items").delete().in("id", ids);
       oExplotar(error);
+      recargar();
     },
     async vaciar() {
       const { error } = await sb.from("mercar_items").delete().eq("casa", casa);
       oExplotar(error);
+      recargar();
     },
     async agregarPropio(producto) {
       const { error } = await sb.from("mercar_propios").insert({
@@ -243,6 +255,7 @@ function almacenSupabase(casa: string): Almacen {
         categoria: producto.categoria,
       });
       oExplotar(error);
+      recargar();
     },
   };
 }
