@@ -1,27 +1,27 @@
 -- Mercar: la lista del mercado compartida entre los dos teléfonos.
--- Se corre una sola vez, en Supabase > SQL Editor > New query > Run.
+-- Se puede correr entero las veces que haga falta, esté como esté la base.
 
 create table if not exists public.mercar_items (
-  id          uuid primary key default gen_random_uuid(),
-  casa        text        not null,
-  nombre      text        not null,
-  nombre_de   text,
-  emoji       text,
-  categoria   text        not null,
-  nota        text,
+  id           uuid primary key default gen_random_uuid(),
+  casa         text        not null,
+  nombre       text        not null,
+  nombre_de    text,
+  emoji        text,
+  categoria    text        not null,
+  nota         text,
   agregado_por text,
-  creado_en   timestamptz not null default now()
+  creado_en    timestamptz not null default now()
 );
 
 -- Los productos que ustedes crean y que no venían en el catálogo de la app.
 create table if not exists public.mercar_propios (
-  id          uuid primary key default gen_random_uuid(),
-  casa        text        not null,
-  nombre      text        not null,
-  nombre_de   text,
-  emoji       text,
-  categoria   text        not null,
-  creado_en   timestamptz not null default now()
+  id        uuid primary key default gen_random_uuid(),
+  casa      text        not null,
+  nombre    text        not null,
+  nombre_de text,
+  emoji     text,
+  categoria text        not null,
+  creado_en timestamptz not null default now()
 );
 
 create index if not exists mercar_items_casa_idx   on public.mercar_items (casa, creado_en);
@@ -45,13 +45,31 @@ create policy mercar_items_abierta on public.mercar_items
 create policy mercar_propios_abierta on public.mercar_propios
   for all to anon, authenticated using (true) with check (true);
 
--- Sin esto no hay sincronización en vivo entre los dos teléfonos.
-alter publication supabase_realtime add table public.mercar_items;
-alter publication supabase_realtime add table public.mercar_propios;
-
--- Y sin esto solo viajan los INSERT. Al borrar, Postgres mete en el WAL nada
--- más la clave primaria, así que Realtime no puede evaluar la política RLS
--- contra la fila y descarta el evento en silencio: el otro teléfono nunca ve
--- desaparecer lo que uno ya compró, que es justo el gesto principal de la app.
+-- Al borrar, Postgres apunta solo la clave primaria en el registro de cambios.
+-- Realtime necesita la fila entera para evaluar la política RLS, y sin esto
+-- descarta el evento: el otro teléfono nunca ve desaparecer lo ya comprado, que
+-- es justo el gesto principal de la app.
 alter table public.mercar_items   replica identity full;
 alter table public.mercar_propios replica identity full;
+
+-- Sin la publicación no hay sincronización en vivo. Agregar una tabla que ya
+-- está dentro revienta, así que se comprueba antes y el script queda re-corrible.
+do $$
+declare t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+
+  foreach t in array array['mercar_items', 'mercar_propios']
+  loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
